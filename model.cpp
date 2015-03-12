@@ -60,6 +60,9 @@ Model::Model(QObject* parent) : QObject(parent) {
 				sqlType = "INTEGER";
 			}
 
+			if(info.find("required") != info.end() && info["required"].toBool())
+				sqlType += " NOT NULL";
+
 			columns.append(name + " " + sqlType);
 
 			++attr;
