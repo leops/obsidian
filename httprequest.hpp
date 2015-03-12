@@ -8,6 +8,7 @@
 class HTTPRequest : public QObject {
 	Q_OBJECT
 	Q_PROPERTY(QString method READ method)
+	Q_PROPERTY(QStringList path READ path)
 	Q_PROPERTY(QUrl url READ url)
 
 public:
@@ -30,12 +31,17 @@ public slots:
 		return m_headers[key];
 	}
 
+	QString params(const QString& key) const {
+		return m_params.value(key);
+	}
+
 private:
 	QTcpSocket* m_socket;
 	QString m_method;
 	QUrl m_url;
 	QStringList m_path;
-	QMap<QString, QString> m_headers;
+	QHash<QString, QString> m_headers;
+	QHash<QString, QString> m_params;
 };
 
 #endif // HTTPREQUEST_HPP

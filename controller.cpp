@@ -133,25 +133,20 @@ void Controller::loadModels() {
 
 void Controller::query(HTTPRequest& req, HTTPResponse& res) {
 	auto path = req.path();
-	QString ctrl = "index",
-			func = "index";
-	if(path.length() > 0)
-		ctrl = path[0];
-	if(path.length() > 1)
-		func = path[1];
+	auto ctrl = m_controllers["index"];
+	auto func = ctrl.property("index");
+	if(path.length() > 0 && m_controllers.constFind(path[0]) != m_controllers.constEnd())
+		ctrl = m_controllers[path[0]];
+	if(path.length() > 1 && ctrl.property(path[1]).isFunction())
+		func = ctrl.property(path[1]);
 
 	QScriptValueList args;
 	args << m_engine.newQObject(&req) << m_engine.newQObject(&res);
 
-	if(m_controllers.constFind(ctrl) != m_controllers.constEnd()) {
-		auto code = m_controllers[ctrl].property(func);
-		if(code.isFunction()) {
-			code.call(code, args);
-			if(uncaughtException(&m_engine))
-				res.close(500);
-		} else {
-			res.close(404);
-		}
+	if(func.isFunction()) {
+		func.call(func, args);
+		if(uncaughtException(&m_engine))
+			res.close(500);
 	} else {
 		res.close(404);
 	}
