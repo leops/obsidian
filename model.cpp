@@ -1,8 +1,33 @@
 #include "model.hpp"
 
 Model::Model(QObject* parent) : QObject(parent) {
-	QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-	db.setDatabaseName("db");
+	QFile cfg(getDir("config").absoluteFilePath("database.json"));
+	cfg.open(QIODevice::ReadOnly | QIODevice::Text);
+	auto config = QJsonDocument::fromJson(cfg.readAll()).object();
+	cfg.close();
+
+	auto type = config["type"].toString().toLower();
+	if(type == "sqlite") {
+		type = "QSQLITE";
+	} else if(type == "mysql") {
+		type = "QMYSQL";
+	} else if(type == "postgres") {
+		type = "QPSQL";
+	}
+
+	QSqlDatabase db = QSqlDatabase::addDatabase(type);
+
+	if(config.contains("name"))
+		db.setDatabaseName(config["name"].toString());
+	if(config.contains("host"))
+		db.setHostName(config["host"].toString());
+	if(config.contains("port"))
+		db.setPort(config["port"].toInt());
+	if(config.contains("userName"))
+		db.setUserName(config["userName"].toString());
+	if(config.contains("password"))
+		db.setPassword(config["password"].toString());
+
 	if(!db.open())
 		qWarning() << "Could not open database";
 
