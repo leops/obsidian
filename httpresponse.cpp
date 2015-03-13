@@ -1,6 +1,8 @@
 #include "httpresponse.hpp"
+#include "obsidian.hpp"
 
-HTTPResponse::HTTPResponse(QTcpSocket* socket, View* view, QObject *parent) : QObject(parent), m_socket(socket), m_view(view) {
+HTTPResponse::HTTPResponse(QTcpSocket* socket, QObject *parent) : QObject(parent), m_socket(socket) {
+	initCodes();
 	m_socket->waitForConnected();
 	headers("Server", "Obsidian/0.0.1");
 	headers("Content-Type", "text/html; charset=utf-8");
@@ -37,21 +39,35 @@ void HTTPResponse::json(const QScriptValue &data, const bool indented) {
 }
 
 void HTTPResponse::close(quint16 status) {
-	headers("Content-Length", QString("%1").arg(m_data.size()));
+	headers("Content-Length", QString::number(m_data.size()));
 
-	std::stringstream stream;
-	stream << "HTTP/1.1 " << status << " OK\n";
-	for(auto h : m_headers.toStdMap()) {
-		stream << h.first.toStdString() << ": " << h.second.toStdString() << "\n";
+	QString str;
+	QTextStream stream(&str);
+	stream << "HTTP/1.1 " << status << " " << m_codes[status] << "\n";
+	for(auto i = m_headers.constBegin(); i != m_headers.constEnd(); ++i) {
+		stream << i.key() << ": " << i.value() << "\n";
 	}
 	stream << "\n";
 
-	m_socket->write(stream.str().c_str());
+	m_socket->write(str.toUtf8());
 	m_socket->write(m_data);
 	m_socket->close();
 }
 
-void HTTPResponse::render(const QString &name, const QScriptValue &params) {
-	m_data = m_view->render(name, params);
-	close(200);
+void HTTPResponse::render(const QString& name, const QVariantHash& params) {
+	auto viewList = static_cast<Obsidian*>(parent())->getViews();
+	foreach(auto mgr, viewList) {
+		auto manager = static_cast<ViewManager*>(mgr);
+		if(manager->has(name)) {
+			m_data = manager->render(name, params);
+			return close(200);
+		}
+	}
+	close(404);
+}
+
+void HTTPResponse::initCodes() {
+	m_codes[200] = "OK";
+	m_codes[404] = "NOT FOUND";
+	m_codes[500] = "SERVER ERROR";
 }

@@ -1,19 +1,48 @@
 #include "view.hpp"
 
-View::View(QObject *parent) : QObject(parent) {
-
-}
-
-QScriptValue eval(QString expression, const QScriptValue& context) {
+QVariant eval(QString expression, const QVariantHash& context) {
 	auto path = expression.remove("]").split(QRegExp("[(\\.\\[]"));
-	QScriptValue val = context;
+	QVariant var;
+	QVariantHash hash = context;
+	QVariantList list;
+	QVariantMap map;
+
 	foreach(auto str, path) {
-		val = val.property(str);
+		if(!hash.empty()) {
+			var = hash.value(str);
+		} else if(!list.empty()) {
+			var = list.value(str.toInt());
+		} else if(!map.empty()) {
+			var = map.value(str);
+		} else {
+			return var;
+		}
+
+		switch(var.type()) {
+			case QMetaType::QVariantMap:
+				map = qvariant_cast<QVariantMap>(var);
+				list.clear();
+				hash.clear();
+				break;
+			case QMetaType::QVariantHash:
+				hash = qvariant_cast<QVariantHash>(var);
+				list.clear();
+				map.clear();
+				break;
+			case QMetaType::QVariantList:
+				list = qvariant_cast<QVariantList>(var);
+				hash.clear();
+				map.clear();
+				break;
+			default:
+				return var;
+		}
 	}
-	return val;
+
+	return var;
 }
 
-QByteArray View::render(const QString& name, const QScriptValue& params) {
+QByteArray OTPManager::render(const QString& name, const QVariantHash& params) {
 	QFile view(getDir("views").absoluteFilePath(name + ".html"));
 	view.open(QIODevice::ReadOnly | QIODevice::Text);
 	QString data = view.readAll();
@@ -25,7 +54,7 @@ QByteArray View::render(const QString& name, const QScriptValue& params) {
 	while ((pos = print.indexIn(data, pos)) != -1) {
 		auto len = print.matchedLength();
 		auto val = eval(print.cap(1), params);
-		data.replace(pos, len, toString(val));
+		data.replace(pos, len, val.toString());
 		pos += len;
 	}
 
@@ -52,7 +81,7 @@ QByteArray View::render(const QString& name, const QScriptValue& params) {
 
 		if(eval(condition.cap(1), params).toBool()) {
 			data.remove(pos, len);
-			data.remove(end - len2, len2);
+			data.remove(end - (len + len2), len2);
 		} else {
 			data.remove(pos, end - pos);
 		}
@@ -61,5 +90,10 @@ QByteArray View::render(const QString& name, const QScriptValue& params) {
 	}
 
 	return data.toUtf8();
+}
+
+bool OTPManager::has(const QString& name) const {
+	QFile view(getDir("views").absoluteFilePath(name + ".html"));
+	return view.exists();
 }
 

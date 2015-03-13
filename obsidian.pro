@@ -20,7 +20,8 @@ SOURCES += main.cpp \
     controller.cpp \
     model.cpp \
     global.cpp \
-    view.cpp
+    view.cpp \
+    obsidian.cpp
 
 HEADERS += \
     httprequest.hpp \
@@ -28,4 +29,5 @@ HEADERS += \
     controller.hpp \
     model.hpp \
     global.hpp \
-    view.hpp
+    view.hpp \
+    obsidian.hpp

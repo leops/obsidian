@@ -55,8 +55,12 @@ QString toString(const QScriptValue& var) {
 	}
 }
 
-QScriptValue toScript(const QVariant& var) {
+QScriptValue toScriptValue(QScriptEngine* engine, const QVariant& var) {
 	switch(var.type()) {
+		case QMetaType::QVariantHash:
+			return toScriptValue(engine, qvariant_cast<QVariantHash>(var));
+		case QMetaType::QVariantList:
+			return toScriptValue(engine, qvariant_cast<QVariantList>(var));
 		case QMetaType::Bool:
 			return var.toBool();
 		case QMetaType::QString:
@@ -67,6 +71,54 @@ QScriptValue toScript(const QVariant& var) {
 			return var.toInt();
 		default:
 			qDebug() << "Unknown type" << var.typeName();
-			return QScriptValue::NullValue;
+			return engine->newVariant(var);
+	}
+}
+
+QScriptValue toScriptValue(QScriptEngine* engine, const QVariantHash& hash) {
+	auto obj = engine->newObject();
+	for(auto i = hash.constBegin(); i != hash.constEnd(); ++i) {
+		obj.setProperty(i.key(), toScriptValue(engine, i.value()));
+	}
+	return obj;
+}
+
+QScriptValue toScriptValue(QScriptEngine* engine, const QVariantList& list) {
+	auto arr = engine->newArray(list.length());
+	for(int i = 0; i < list.length(); i++) {
+		arr.setProperty(i, toScriptValue(engine, list[i]));
+	}
+	return arr;
+}
+
+QScriptValue toScriptValue(QScriptEngine* engine, const QList<QVariantHash>& list) {
+	auto arr = engine->newArray(list.length());
+	for(int i = 0; i < list.length(); i++) {
+		arr.setProperty(i, toScriptValue(engine, list[i]));
+	}
+	return arr;
+}
+
+void fromScriptValue(const QScriptValue& obj, QVariantHash& hash) {
+	QScriptValueIterator it(obj);
+	while(it.hasNext()) {
+		it.next();
+		hash[it.name()] = it.value().toVariant();
+	}
+}
+
+void fromScriptValue(const QScriptValue& obj, QVariantList& list) {
+	QScriptValueIterator it(obj);
+	while(it.hasNext()) {
+		it.next();
+		list.append(it.value().toVariant());
+	}
+}
+
+void fromScriptValue(const QScriptValue& obj, QList<QVariantHash>& list) {
+	QScriptValueIterator it(obj);
+	while(it.hasNext()) {
+		it.next();
+		list.append(qvariant_cast<QVariantHash>(it.value().toVariant()));
 	}
 }

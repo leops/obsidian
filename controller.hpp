@@ -6,19 +6,34 @@
 #include "global.hpp"
 #include "httprequest.hpp"
 #include "httpresponse.hpp"
-#include "model.hpp"
+#include "obsidian.hpp"
 
-class Controller : public QObject {
+class ControllerManager : public QObject {
 	Q_OBJECT
+
 public:
-	explicit Controller(Model* model, QObject* parent = nullptr);
+	explicit ControllerManager(QObject* parent = nullptr) : QObject(parent) {}
+	virtual void query(HTTPRequest&, HTTPResponse&) = 0;
+	virtual bool has(const QString&, const QString&) = 0;
+};
+
+Q_DECLARE_INTERFACE(ControllerManager, "com.obsidian.ControllerManager")
+
+class ScriptManager : public ControllerManager {
+	Q_OBJECT
+	Q_INTERFACES(ControllerManager)
+
+public:
+	explicit ScriptManager(QObject* parent = nullptr);
 	virtual void query(HTTPRequest&, HTTPResponse&);
+	virtual bool has(const QString&, const QString&);
+
 protected:
 	void loadModels();
+
 private:
 	QScriptEngine m_engine;
 	QHash<QString, QScriptValue> m_controllers;
-	Model* m_model;
 };
 
 #endif // CONTROLLER_HPP

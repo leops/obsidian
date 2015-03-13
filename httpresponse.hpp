@@ -17,7 +17,7 @@ class HTTPResponse : public QObject {
 	Q_OBJECT
 
 public:
-	explicit HTTPResponse(QTcpSocket* socket, View* view, QObject* parent = nullptr);
+	explicit HTTPResponse(QTcpSocket* socket, QObject* parent = nullptr);
 
 public slots:
 	QString headers(QString key) const {
@@ -39,16 +39,19 @@ public slots:
 	}
 
 	void json(const QScriptValue&, const bool = false);
-	void render(const QString&, const QScriptValue& = QScriptValue());
+	void render(const QString&, const QVariantHash&);
 
 	void serveStatic(QString name);
 	void close(quint16 status = 200);
 
+protected:
+	void initCodes();
+
 private:
 	QTcpSocket* m_socket;
-	QMap<QString, QString> m_headers;
+	QHash<QString, QString> m_headers;
+	QHash<quint16, QString> m_codes;
 	QByteArray m_data;
-	View* m_view;
 };
 
 #endif // HTTPRESPONSE_HPP

@@ -15,28 +15,70 @@
 #include <functional>
 #include "global.hpp"
 
-class Model : public QObject
-{
+Q_DECLARE_METATYPE(QList<QVariantHash>)
+Q_DECLARE_METATYPE(QVariantHash)
+Q_DECLARE_METATYPE(QVariantList)
+
+class Model : public QObject {
 	Q_OBJECT
 
 public:
-	explicit Model(QObject *parent = nullptr);
+	explicit Model(QObject *parent = nullptr) : QObject(parent) {}
 
-	QList<QString> modelList() const {
-		return m_modelList;
+public slots:
+	virtual int create(const QVariantHash&) = 0;
+	virtual QList<QVariantHash> find(const QVariantHash& = {}) = 0;
+	virtual bool update(const QVariantHash&, const QVariantHash&) = 0;
+	virtual bool destroy(const QVariantHash&) = 0;
+};
+
+Q_DECLARE_INTERFACE(Model, "com.obsidian.Model")
+
+class ModelManager : public QObject {
+	Q_OBJECT
+
+public:
+	explicit ModelManager(QObject *parent = nullptr) : QObject(parent) {}
+	virtual Model* createModel(const QString& name, const QJsonObject& data) = 0;
+
+	QStringList models() const {
+		return m_models.keys();
 	}
 
-	typedef QHash<QString, QVariant> Row;
+	Model* models(const QString& name) const {
+		return m_models[name];
+	}
 
-	virtual int create(const QString&, const Row&);
-	virtual QList<Row> find(const QString&, const Row& = {});
-	virtual bool update(const QString&, const Row&, const Row&);
-	virtual bool destroy(const QString&, const Row&);
+protected:
+	QHash<QString, Model*> m_models;
+};
 
-private:
-	QHash<QString, QHash<QString, QString>> m_models;
-	QList<QString> m_modelList;
+Q_DECLARE_INTERFACE(ModelManager, "com.obsidian.ModelManager")
 
+class SQLModel : public Model {
+	Q_OBJECT
+	Q_INTERFACES(Model)
+
+public:
+	explicit SQLModel(const QString& name, const QJsonObject& data, QObject *parent = nullptr);
+
+public slots:
+	virtual int create(const QVariantHash&);
+	virtual QList<QVariantHash> find(const QVariantHash& = {});
+	virtual bool update(const QVariantHash&, const QVariantHash&);
+	virtual bool destroy(const QVariantHash&);
+
+protected:
+	QHash<QString, QString> m_attributes;
+};
+
+class SQLManager : public ModelManager {
+	Q_OBJECT
+	Q_INTERFACES(ModelManager)
+
+public:
+	explicit SQLManager(QObject *parent = nullptr);
+	virtual Model* createModel(const QString& name, const QJsonObject& data);
 };
 
 #endif // MODEL_HPP
