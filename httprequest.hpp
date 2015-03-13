@@ -28,11 +28,19 @@ public:
 
 public slots:
 	QString headers(QString key) const {
-		return m_headers[key];
+		return m_headers.value(key, QString());
 	}
 
 	QString params(const QString& key) const {
-		return m_params.value(key);
+		return m_params.value(key, QString());
+	}
+
+	QString post(const QString& key) const {
+		return m_post.value(key, QString());
+	}
+
+	QString cookies(const QString& key) const {
+		return m_cookies.value(key, QString());
 	}
 
 private:
@@ -42,6 +50,8 @@ private:
 	QStringList m_path;
 	QHash<QString, QString> m_headers;
 	QHash<QString, QString> m_params;
+	QHash<QString, QString> m_post;
+	QHash<QString, QString> m_cookies;
 };
 
 #endif // HTTPREQUEST_HPP

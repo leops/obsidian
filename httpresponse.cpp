@@ -4,6 +4,10 @@
 HTTPResponse::HTTPResponse(QTcpSocket* socket, QObject *parent) : QObject(parent), m_socket(socket) {
 	initCodes();
 	m_socket->waitForConnected();
+
+	if(!m_socket->isWritable())
+		close(408);
+
 	headers("Server", "Obsidian/0.0.1");
 	headers("Content-Type", "text/html; charset=utf-8");
 }
@@ -38,6 +42,10 @@ void HTTPResponse::json(const QScriptValue &data, const bool indented) {
 	close(200);
 }
 
+void HTTPResponse::cookies(const QString &key, const QString& value) {
+	headers("Set-Cookie", key + "=" + value, true);
+}
+
 void HTTPResponse::close(quint16 status) {
 	headers("Content-Length", QString::number(m_data.size()));
 
@@ -67,7 +75,30 @@ void HTTPResponse::render(const QString& name, const QVariantHash& params) {
 }
 
 void HTTPResponse::initCodes() {
+	m_codes[100] = "CONTINUE";
+	m_codes[101] = "SWITCHING PROTOCOLS";
+
 	m_codes[200] = "OK";
+	m_codes[201] = "CREATED";
+	m_codes[202] = "ACCEPTED";
+
+	m_codes[301] = "MOVED";
+	m_codes[302] = "FOUND";
+	m_codes[303] = "SEE OTHER";
+	m_codes[304] = "NOT MODIFIED";
+
+	m_codes[400] = "BAD REQUEST";
+	m_codes[401] = "UNAUTHORIZED";
+	m_codes[403] = "FORBIDDEN";
 	m_codes[404] = "NOT FOUND";
+	m_codes[405] = "METHOD NOT ALLOWED";
+	m_codes[408] = "REQUEST TIMEOUT";
+	m_codes[409] = "CONFLICT";
+	m_codes[410] = "GONE";
+	m_codes[429] = "TOO MANY REQUESTS";
+
 	m_codes[500] = "SERVER ERROR";
+	m_codes[501] = "NOT IMPLEMENTED";
+	m_codes[503] = "UNAVAILABLE";
+	m_codes[512] = "IM A TEAPOT";
 }

@@ -21,11 +21,14 @@ public:
 
 public slots:
 	QString headers(QString key) const {
-		return m_headers[key];
+		return m_headers.value(key);
 	}
 
-	QString headers(QString key, QString value) {
-		m_headers[key] = value;
+	QString headers(const QString& key, const QString& value, const bool& multi = false) {
+		if(multi)
+			m_headers.insertMulti(key, value);
+		else
+			m_headers.insert(key, value);
 		return headers(key);
 	}
 
@@ -40,6 +43,7 @@ public slots:
 
 	void json(const QScriptValue&, const bool = false);
 	void render(const QString&, const QVariantHash&);
+	void cookies(const QString&, const QString&);
 
 	void serveStatic(QString name);
 	void close(quint16 status = 200);
