@@ -42,54 +42,107 @@ QVariant eval(QString expression, const QVariantHash& context) {
 	return var;
 }
 
+int getNext(std::initializer_list<int> tokens) {
+	for(int i : tokens) {
+		if(i != -1) {
+			bool smaller = false;
+			for(int j : tokens) {
+				if(j != -1 && j < i) {
+					smaller = true;
+					break;
+				}
+			}
+			if(!smaller)
+				return i;
+		}
+	}
+	return -1;
+}
+
 QByteArray OTPManager::render(const QString& name, const QVariantHash& params) {
+	const QString expr = "([\\w\\.\\[\\]]+)";
+	const QRegExp print("<\\?=\\s*" + expr + "\\s*\\?>");
+	const QRegExp condition("<\\?\\s*if\\(\\s*" + expr + "\\s*\\)\\s*\\{\\s*\\?>");
+	const QRegExp loop("<\\?\\s*for\\(\\s*(\\w+)\\s*:\\s*" + expr + "\\s*\\)\\s*\\{\\s*\\?>");
+	const QRegExp variable("<\\?\\s*var\\s+(\\w+)\\s*=\\s*" + expr + "\\s*\\?>");
+	const QRegExp close("<\\?\\s*([{}])\\s*\\?>");
+
+	m_scopes.push(Scope("", params, QVariantHash()));
+
 	QFile view(getDir("views").absoluteFilePath(name + ".html"));
-	view.open(QIODevice::ReadOnly | QIODevice::Text);
-	QString data = view.readAll();
-	view.close();
+	if (view.open(QIODevice::ReadOnly | QIODevice::Text)) {
+		QString data = view.readAll();
+		int pos = 0;
 
-	QString expr = "([\\w\\.\\[\\]]+)";
-	QRegExp print("<\\?=\\s*" + expr + "\\s*\\?>");
-	int pos = 0;
-	while ((pos = print.indexIn(data, pos)) != -1) {
-		auto len = print.matchedLength();
-		auto val = eval(print.cap(1), params);
-		data.replace(pos, len, val.toString());
-		pos += len;
-	}
+		while(pos < data.length()) {
+			int nextPrint = print.indexIn(data, pos),
+				nextCond = condition.indexIn(data, pos),
+				nextClose = close.indexIn(data, pos),
+				nextVar = variable.indexIn(data, pos),
+				nextLoop = loop.indexIn(data, pos),
+				next = getNext({nextPrint, nextCond, nextClose, nextVar, nextLoop});
 
-	QRegExp condition("<\\?\\s*if\\(\\s*" + expr + "\\s*\\)\\s*\\{\\s*\\?>");
-	QRegExp close("<\\?\\s*([{}])\\s*\\?>");
-	pos = 0;
-	while ((pos = condition.indexIn(data, pos)) != -1) {
-		int len = condition.matchedLength(),
-			len2 = 0,
-			end = pos,
-			open = 1;
-
-		while ((end = close.indexIn(data, end)) != -1) {
-			len2 = close.matchedLength();
-			end += len2;
-			auto symbol = close.cap(1);
-			if(symbol == "{")
-				open++;
-			if(symbol == "}")
-				open--;
-			if(open <= 0)
+			if(next == -1) {
 				break;
+			}
+
+			std::get<0>(m_scopes.top()) += data.mid(pos, next - pos);
+
+			if(next == nextCond) {
+				auto nScope = m_scopes.top();
+				std::get<0>(nScope) = "";
+				std::get<2>(nScope).insert("type", "condition");
+				std::get<2>(nScope).insert("value", eval(condition.cap(1), std::get<1>(nScope)));
+				m_scopes.push(nScope);
+				data.remove(next, condition.matchedLength());
+			} else if(next == nextVar) {
+				auto val = eval(variable.cap(2), std::get<1>(m_scopes.top()));
+				std::get<1>(m_scopes.top()).insert(variable.cap(1), val);
+				data.remove(next, variable.matchedLength());
+			} else if(next == nextLoop) {
+				auto copy = m_scopes.top();
+				auto varName = loop.cap(1);
+				auto array = qvariant_cast<QVariantList>(eval(loop.cap(2), std::get<1>(m_scopes.top())));
+				for(int i = 0; i < array.length(); i++) {
+					auto nScope = copy;
+					std::get<0>(nScope) = "";
+					std::get<1>(nScope).insert(varName, array[i]);
+					std::get<2>(nScope).insert("type", "loop");
+					std::get<2>(nScope).insert("start", next);
+					std::get<2>(nScope).insert("last", i == 0);
+					m_scopes.push(nScope);
+				}
+				data.remove(next, loop.matchedLength());
+			} else if(next == nextPrint) {
+				auto val = eval(print.cap(1), std::get<1>(m_scopes.top())).toString();
+				std::get<0>(m_scopes.top()) += val;
+				next += print.matchedLength();
+			} else if(next == nextClose) {
+				auto scope = m_scopes.pop();
+				auto info = std::get<2>(scope);
+				bool clear = true;
+				if(info.value("type") == "condition") {
+					if(info.value("value").toBool()) {
+						std::get<0>(m_scopes.top()) += std::get<0>(scope);
+					}
+				} else if(info.value("type") == "loop") {
+					std::get<0>(m_scopes.top()) += std::get<0>(scope);
+					if(!info.value("last").toBool()) {
+						next = info.value("start").toInt();
+						clear = false;
+					}
+				}
+				if(clear)
+					data.remove(next, close.matchedLength());
+			}
+
+			pos = next;
 		}
 
-		if(eval(condition.cap(1), params).toBool()) {
-			data.remove(pos, len);
-			data.remove(end - (len + len2), len2);
-		} else {
-			data.remove(pos, end - pos);
-		}
-
-		pos += len;
+		view.close();
 	}
 
-	return data.toUtf8();
+	return std::get<0>(m_scopes.top()).toUtf8();
 }
 
 bool OTPManager::has(const QString& name) const {

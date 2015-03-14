@@ -27,7 +27,7 @@ public:
 
 public slots:
 	virtual int create(const QVariantHash&) = 0;
-	virtual QList<QVariantHash> find(const QVariantHash& = {}) = 0;
+	virtual QList<QVariantHash> find(const QVariantHash& = QVariantHash()) = 0;
 	virtual bool update(const QVariantHash&, const QVariantHash&) = 0;
 	virtual bool destroy(const QVariantHash&) = 0;
 };
@@ -64,7 +64,7 @@ public:
 
 public slots:
 	virtual int create(const QVariantHash&);
-	virtual QList<QVariantHash> find(const QVariantHash& = {});
+	virtual QList<QVariantHash> find(const QVariantHash& = QVariantHash());
 	virtual bool update(const QVariantHash&, const QVariantHash&);
 	virtual bool destroy(const QVariantHash&);
 

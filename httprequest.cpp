@@ -18,7 +18,7 @@ HTTPRequest::HTTPRequest(QTcpSocket* socket, QObject *parent) : QObject(parent),
 
 	data = data.mid(data.indexOf('\n') + 1);
 	QString head, body;
-	auto split = QRegExp("\r\n\r\n");
+	auto split = QRegExp("\\r\\n\\r\\n");
 	if(data.indexOf(split) != -1) {
 		auto d = data.split(split);
 		head = d.at(0).trimmed();
@@ -36,7 +36,7 @@ HTTPRequest::HTTPRequest(QTcpSocket* socket, QObject *parent) : QObject(parent),
 	}
 
 	if(m_headers.contains("Cookie")) {
-		auto cookies = headers("Cookie").split(QRegExp(";\s?"));
+		auto cookies = headers("Cookie").split(QRegExp(";\\s?"));
 		foreach(auto c, cookies) {
 			auto cookie = c.split("=");
 			m_cookies.insert(cookie.at(0), cookie.at(1));

@@ -5,6 +5,7 @@
 #include <QScriptValue>
 #include <QScriptValueIterator>
 #include <QFile>
+#include <QStack>
 #include "global.hpp"
 
 class ViewManager : public QObject {
@@ -26,6 +27,10 @@ public:
 	explicit OTPManager(QObject* parent = nullptr) : ViewManager(parent) {}
 	virtual QByteArray render(const QString& name, const QVariantHash& params);
 	virtual bool has(const QString &) const;
+
+private:
+	typedef std::tuple<QString, QVariantHash, QVariantHash> Scope;
+	QStack<Scope> m_scopes;
 };
 
 #endif // VIEW_HPP

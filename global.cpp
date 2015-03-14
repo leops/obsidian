@@ -3,14 +3,19 @@
 QDir getDir(QString name) {
 	auto dir = QDir(qApp->applicationDirPath());
 
+#ifdef QT_DEBUG
 #if defined(Q_OS_WIN)
 	if (dir.dirName().toLower() == "debug" || dir.dirName().toLower() == "release") {
+		dir.cdUp();
+		dir.cdUp();
 		dir.cdUp();
 	}
 #elif defined(Q_OS_MAC)
 	if (dir.dirName() == "MacOS") {
 		dir.cdUp();
 	}
+#endif
+	dir.cd("site");
 #endif
 
 	dir.cd(name);
