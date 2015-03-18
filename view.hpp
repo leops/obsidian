@@ -28,9 +28,13 @@ public:
 	virtual QByteArray render(const QString& name, const QVariantHash& params);
 	virtual bool has(const QString &) const;
 
+protected:
+	QString parse(const QString& data, const QVariantHash& context);
+	QVariant eval(QString expression, const QVariantHash& context);
+	int getNext(std::initializer_list<int> tokens);
+
 private:
 	typedef std::tuple<QString, QVariantHash, QVariantHash> Scope;
-	QStack<Scope> m_scopes;
 };
 
 #endif // VIEW_HPP
