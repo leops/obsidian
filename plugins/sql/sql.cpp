@@ -1,9 +1,11 @@
-#include "model.hpp"
+#include <sql.hpp>
+#include <global.hpp>
+#include <QSqlQuery>
 
-SQLModel::SQLModel(const QString& name, const QJsonObject& data, QObject *parent) : Model(parent) {
+SQLModel::SQLModel(const QString& name, const QJsonObject& data, QObject *parent) : QObject(parent) {
 	setObjectName(name);
 	auto model = data.toVariantMap();
-	QStringList columns = {"id PRIMARY KEY"};
+	QStringList columns = {};
 
 	auto attr = model.constBegin();
 	while (attr != model.constEnd()) {
@@ -17,6 +19,8 @@ SQLModel::SQLModel(const QString& name, const QJsonObject& data, QObject *parent
 			sqlType = "TEXT";
 		} else if(type == "integer") {
 			sqlType = "INTEGER";
+		} else if (type == "primary") {
+			sqlType = "INTEGER PRIMARY KEY";
 		}
 
 		if(info.find("required") != info.end() && info["required"].toBool())
@@ -32,37 +36,62 @@ SQLModel::SQLModel(const QString& name, const QJsonObject& data, QObject *parent
 	query.exec(create);
 }
 
-int SQLModel::create(const QVariantHash& values) {
+int SQLModel::create(const QVariantHash& object) {
+	return create(QVariantList{object});
+}
+
+int SQLModel::create(const QVariantList& objects) {
 	QSqlQuery query;
-	QStringList columns;
 
-	for(auto i = values.constBegin(); i != values.constEnd(); ++i) {
-		columns.append(i.key());
+	QStringList rows, fields;
+	for(auto i = objects.constBegin(); i != objects.constEnd(); ++i) {
+		fields.clear();
+		auto hash = i->toHash();
+		for(auto j = hash.constBegin(); j != hash.constEnd(); ++j) {
+			fields.append(j.key());
+		}
+		rows.append(fields.join(", :").prepend(':'));
 	}
 
-	query.prepare(QString("INSERT INTO %1 (%2) VALUES (%3);").arg(objectName()).arg(columns.join(", ")).arg(columns.join(", :").prepend(":")));
+	query.prepare(QString("INSERT INTO %1 (%2) VALUES (%3);").arg(objectName()).arg(fields.join(", ")).arg(rows.join("), (")));
 
-	for(auto i = values.constBegin(); i != values.constEnd(); ++i) {
+	/*for(auto i = values.constBegin(); i != values.constEnd(); ++i) {
 		query.bindValue(":" + i.key(), i.value());
-	}
+	}*/
 
 	query.exec();
 	return query.lastInsertId().toInt();
 }
 
-QList<QVariantHash> SQLModel::find(const QVariantHash& selector) {
+QString SQLModel::parseSelector(const QVariantHash& selector) {
+	QStringList values;
+	auto keys = selector.keys();
+	std::transform(keys.constBegin(), keys.constEnd(), std::back_inserter(values), [=](auto key) {
+		return key + " = :" + key;
+	});
+	return values.join(" AND ");
+}
+
+QVariantHash SQLModel::findOne(const QVariantHash& selector, const QStringList& projection) {
+	return find(selector, projection).first().toHash(); // TODO: Limit 1
+}
+
+QVariantList SQLModel::find(const QVariantHash& selector, const QStringList& projection) {
 	QSqlQuery find;
 	QString cond;
 
-	if(selector.size() > 0) {
-		QStringList val;
-		for(auto i = selector.constBegin(); i != selector.constEnd(); ++i) {
-			val.append(QString("%1 = :%1").arg(i.key()));
-		}
-		cond = "WHERE " + val.join(" AND ");
+	QStringList fields{"*"};
+	if(projection.size() > 0) {
+		fields = projection;
+		fields.prepend("id");
 	}
 
-	find.prepare(QString("SELECT * FROM %1 %2;").arg(objectName()).arg(cond));
+	if(selector.size() > 0)
+		cond = "WHERE " + parseSelector(selector);
+
+	auto req = QString("SELECT %3 FROM %1 %2;").arg(objectName()).arg(cond).arg(fields.join(", "));
+	qDebug() << req;
+	find.prepare(req);
 
 	if(selector.size() > 0) {
 		for(auto i = selector.constBegin(); i != selector.constEnd(); ++i) {
@@ -72,7 +101,7 @@ QList<QVariantHash> SQLModel::find(const QVariantHash& selector) {
 
 	find.exec();
 
-	QList<QVariantHash> result;
+	QVariantList result;
 	while (find.next()) {
 		QVariantHash row;
 
@@ -83,43 +112,45 @@ QList<QVariantHash> SQLModel::find(const QVariantHash& selector) {
 		result.append(row);
 	}
 
+	qDebug() << result;
+
 	return result;
 }
 
 bool SQLModel::update(const QVariantHash& selector, const QVariantHash& values) {
 	QSqlQuery query;
-	QStringList columns, conds;
 
-	for(auto i = selector.constBegin(); i != selector.constEnd(); ++i) {
-		columns.append(QString("%1 = :%1").arg(i.key()));
-	}
-
+	QStringList columns;
 	for(auto i = values.constBegin(); i != values.constEnd(); ++i) {
-		conds.append(QString("%1 = :%1").arg(i.key()));
+		columns.append(QString("%1 = :%1_val").arg(i.key()));
 	}
 
-	query.prepare(QString("UPDATE %1 SET %2 WHERE %3;").arg(objectName()).arg(columns.join(" ")).arg(conds.join(" AND ")));
+	auto req = QString("UPDATE %1 SET %2 WHERE %3;").arg(objectName()).arg(columns.join(", ")).arg(parseSelector(selector));
+	qDebug() << req;
+	query.prepare(req);
 
 	for(auto i = selector.constBegin(); i != selector.constEnd(); ++i) {
 		query.bindValue(":" + i.key(), i.value());
 	}
 
 	for(auto i = values.constBegin(); i != values.constEnd(); ++i) {
-		query.bindValue(":" + i.key(), i.value());
+		query.bindValue(":" + i.key() + "_val", i.value());
 	}
 
 	return query.exec();
 }
 
-bool SQLModel::destroy(const QVariantHash& selector) {
+bool SQLModel::destroy(const QVariantHash& selector, int limit) {
 	QSqlQuery del;
 	QStringList cond;
 
-	for(auto i = selector.constBegin(); i != selector.constEnd(); ++i) {
-		cond.append(QString("%1 = :%1").arg(i.key()));
-	}
+	QString lmt;
+	if (limit > 0)
+		lmt = QString("LIMIT %1").arg(limit);
 
-	del.prepare(QString("DELETE FROM %1 WHERE %2;").arg(objectName()).arg(cond.join(" AND ")));
+	auto req = QString("DELETE FROM %1 WHERE %2 %3;").arg(objectName()).arg(parseSelector(selector)).arg(lmt);
+	qDebug() << req;
+	del.prepare(req);
 
 	for(auto i = selector.constBegin(); i != selector.constEnd(); ++i) {
 		del.bindValue(":" + i.key(), i.value());
@@ -128,12 +159,8 @@ bool SQLModel::destroy(const QVariantHash& selector) {
 	return del.exec();
 }
 
-SQLManager::SQLManager(QObject* parent) : ModelManager(parent) {
-	QFile cfg(getDir("config").absoluteFilePath("database.json"));
-	cfg.open(QIODevice::ReadOnly | QIODevice::Text);
-	auto config = QJsonDocument::fromJson(cfg.readAll()).object();
-	cfg.close();
-
+SQLManager::SQLManager(QObject* parent) : QObject(parent) {
+	auto config = getConfig("database");
 	auto type = config["type"].toString().toLower();
 	if(type == "sqlite") {
 		type = "QSQLITE";

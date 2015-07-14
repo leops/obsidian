@@ -7,8 +7,6 @@
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
-#include <QScriptValue>
-#include <QScriptValueIterator>
 #include <sstream>
 #include "global.hpp"
 #include "view.hpp"
@@ -19,7 +17,7 @@ class HTTPResponse : public QObject {
 public:
 	explicit HTTPResponse(QTcpSocket* socket, QObject* parent = nullptr);
 
-public slots:
+public Q_SLOTS:
 	QString headers(QString key) const {
 		return m_headers.value(key);
 	}
@@ -41,12 +39,15 @@ public slots:
 		close(status);
 	}
 
-	void json(const QScriptValue&, const bool = false);
-	void render(const QString&, const QVariantHash&);
-	void cookies(const QString&, const QString&);
+	void json(const QVariantHash& data, const bool indented = false);
+	void render(const QString& name, const QVariantHash& params);
+	void cookies(const QString& key, const QString& value);
 
 	void serveStatic(QString name);
 	void close(quint16 status = 200);
+	bool isClosed() {
+		return m_isClosed;
+	}
 
 protected:
 	void initCodes();
@@ -56,6 +57,7 @@ private:
 	QHash<QString, QString> m_headers;
 	QHash<quint16, QString> m_codes;
 	QByteArray m_data;
+	bool m_isClosed;
 };
 
 #endif // HTTPRESPONSE_HPP

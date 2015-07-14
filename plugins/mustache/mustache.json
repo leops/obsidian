@@ -1,0 +1,10 @@
+{
+	"Name" : "Mustache",
+	"Version" : "0.0.1",
+	"CompatVersion" : "0.0.1",
+	"Vendor" : "leops",
+	"Copyright" : "(C) leops",
+	"License" : "MIT",
+	"Description" : "Adds Mustache Views to Obsidian",
+	"Url" : "http://www.leops.me"
+}

@@ -1,7 +1,7 @@
 #include "httpresponse.hpp"
 #include "obsidian.hpp"
 
-HTTPResponse::HTTPResponse(QTcpSocket* socket, QObject *parent) : QObject(parent), m_socket(socket) {
+HTTPResponse::HTTPResponse(QTcpSocket* socket, QObject *parent) : QObject(parent), m_socket(socket), m_isClosed(false) {
 	initCodes();
 	m_socket->waitForConnected();
 
@@ -26,19 +26,13 @@ void HTTPResponse::serveStatic(QString name) {
 	}
 }
 
-void HTTPResponse::json(const QScriptValue &data, const bool indented) {
+void HTTPResponse::json(const QVariantHash& data, const bool indented) {
 	headers("Content-Type", "application/json");
-	auto json = toJSON(data);
-	auto format = QJsonDocument::JsonFormat::Compact;
-	if(indented)
-		format = QJsonDocument::JsonFormat::Indented;
-	if(json.isArray()) {
-		auto arr = json.toArray();
-		arr.removeLast();
-		m_data = QJsonDocument(arr).toJson(format);
-	} else if(json.isObject()) {
-		m_data = QJsonDocument(json.toObject()).toJson(format);
-	}
+
+	auto format = indented ? QJsonDocument::JsonFormat::Indented : QJsonDocument::JsonFormat::Compact;
+	auto json = QJsonObject::fromVariantHash(data);
+	m_data = QJsonDocument(json).toJson(format);
+
 	close(200);
 }
 
@@ -47,24 +41,28 @@ void HTTPResponse::cookies(const QString &key, const QString& value) {
 }
 
 void HTTPResponse::close(quint16 status) {
-	headers("Content-Length", QString::number(m_data.size()));
+	if (!isClosed()) {
+		headers("Content-Length", QString::number(m_data.size()));
 
-	QString str;
-	QTextStream stream(&str);
-	stream << "HTTP/1.1 " << status << " " << m_codes[status] << "\n";
-	for(auto i = m_headers.constBegin(); i != m_headers.constEnd(); ++i) {
-		stream << i.key() << ": " << i.value() << "\n";
+		QString str;
+		QTextStream stream(&str);
+		stream << "HTTP/1.1 " << status << " " << m_codes[status] << "\n";
+		for (auto i = m_headers.constBegin(); i != m_headers.constEnd(); ++i) {
+			stream << i.key() << ": " << i.value() << "\n";
+		}
+		stream << "\n";
+
+		m_socket->write(str.toUtf8());
+		m_socket->write(m_data);
+		m_socket->close();
+		m_isClosed = true;
 	}
-	stream << "\n";
-
-	m_socket->write(str.toUtf8());
-	m_socket->write(m_data);
-	m_socket->close();
 }
 
 void HTTPResponse::render(const QString& name, const QVariantHash& params) {
+	qDebug() << "render" << params;
 	auto viewList = static_cast<Obsidian*>(parent())->getViews();
-	foreach(auto mgr, viewList) {
+	Q_FOREACH(auto mgr, viewList) {
 		auto manager = static_cast<ViewManager*>(mgr);
 		if(manager->has(name)) {
 			m_data = manager->render(name, params);

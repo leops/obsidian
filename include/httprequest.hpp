@@ -10,6 +10,7 @@ class HTTPRequest : public QObject {
 	Q_PROPERTY(QString method READ method)
 	Q_PROPERTY(QStringList path READ path)
 	Q_PROPERTY(QUrl url READ url)
+	Q_PROPERTY(QStringList match READ match)
 
 public:
 	explicit HTTPRequest(QTcpSocket* socket, QObject* parent = nullptr);
@@ -18,7 +19,7 @@ public:
 		return m_method;
 	}
 
-	QStringList path() const {
+	QList<QString> path() const {
 		return m_path;
 	}
 
@@ -26,7 +27,15 @@ public:
 		return m_url;
 	}
 
-public slots:
+	void setMatch(const QStringList& match) {
+		m_match = match;
+	}
+
+	QStringList match() const {
+		return m_match;
+	}
+
+public Q_SLOTS:
 	QString headers(QString key) const {
 		return m_headers.value(key, QString());
 	}
@@ -47,11 +56,12 @@ private:
 	QTcpSocket* m_socket;
 	QString m_method;
 	QUrl m_url;
-	QStringList m_path;
+	QList<QString> m_path;
 	QHash<QString, QString> m_headers;
 	QHash<QString, QString> m_params;
 	QHash<QString, QString> m_post;
 	QHash<QString, QString> m_cookies;
+	QStringList m_match;
 };
 
 #endif // HTTPREQUEST_HPP

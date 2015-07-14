@@ -1,25 +1,17 @@
-#include "global.hpp"
+#include <js.hpp>
+#include <obsidian.hpp>
+#include <model.hpp>
+#include <global.hpp>
+#include <QScriptValueIterator>
 
-QDir getDir(QString name) {
-	auto dir = QDir(qApp->applicationDirPath());
-
-#ifdef QT_DEBUG
-#if defined(Q_OS_WIN)
-	if (dir.dirName().toLower() == "debug" || dir.dirName().toLower() == "release") {
-		dir.cdUp();
-		dir.cdUp();
-		dir.cdUp();
+bool uncaughtException(QScriptEngine* engine){
+	if (engine->hasUncaughtException()) {
+		auto line = engine->uncaughtExceptionLineNumber();
+		qWarning().noquote() << "Uncaught exception at line" << line << ":" << engine->uncaughtException().toString();
+		qWarning().noquote() << engine->uncaughtExceptionBacktrace().join("\n");
+		return true;
 	}
-#elif defined(Q_OS_MAC)
-	if (dir.dirName() == "MacOS") {
-		dir.cdUp();
-	}
-#endif
-	dir.cd("site");
-#endif
-
-	dir.cd(name);
-	return dir;
+	return false;
 }
 
 QJsonValue toJSON(const QScriptValue& var) {
@@ -61,7 +53,7 @@ QString toString(const QScriptValue& var) {
 }
 
 QScriptValue toScriptValue(QScriptEngine* engine, const QVariant& var) {
-	switch(var.type()) {
+	switch(static_cast<QMetaType::Type>(var.type())) {
 		case QMetaType::QVariantHash:
 			return toScriptValue(engine, qvariant_cast<QVariantHash>(var));
 		case QMetaType::QVariantList:
@@ -126,4 +118,71 @@ void fromScriptValue(const QScriptValue& obj, QList<QVariantHash>& list) {
 		it.next();
 		list.append(qvariant_cast<QVariantHash>(it.value().toVariant()));
 	}
+}
+
+ScriptManager::ScriptManager(QObject* parent) : QObject(parent) {
+	qScriptRegisterMetaType<QVariantHash>(&m_engine, toScriptValue, fromScriptValue);
+	qScriptRegisterMetaType<QList<QVariantHash>>(&m_engine, toScriptValue, fromScriptValue);
+
+	auto app = dynamic_cast<Obsidian*>(Obsidian::instance());
+	if(app) {
+		auto global = m_engine.globalObject();
+		auto modelList = app->getModels();
+		Q_FOREACH(auto manager, modelList) {
+			auto list = manager->models();
+			for(int i = 0; i < list.length(); i++) {
+				auto model = dynamic_cast<QObject*>(manager->models(list[i]));
+				if(model) {
+					auto handle = m_engine.newQObject(model);
+					global.setProperty(list[i], handle);
+				}
+			}
+		}
+	}
+
+	auto ctrlDir = getDir("controllers");
+	Q_FOREACH (QString fileName, ctrlDir.entryList({"*.js"}, QDir::Files)) {
+		auto name = fileName.split(".").first().toLower();
+		qDebug().noquote() << "Loading controller" << name;
+		QFile script(ctrlDir.absoluteFilePath(fileName));
+		script.open(QIODevice::ReadOnly);
+
+		auto code = QString("(function(controller) { %1; return controller; })({})").arg(QString(script.readAll()));
+		m_controllers[name] = m_engine.evaluate(code);
+		uncaughtException(&m_engine);
+
+		script.close();
+	}
+}
+
+QVariant ScriptManager::execute(const Controller& cont, QObjectList& arguments) {
+	auto ctrl = m_controllers.value(std::get<0>(cont));
+	auto func = ctrl.property(std::get<1>(cont));
+
+	QScriptValueList args;
+	Q_FOREACH(auto arg, arguments) {
+		args << m_engine.newQObject(arg);
+	}
+
+	if(func.isFunction()) {
+		auto ret = func.call(func, args).toVariant();
+		if (uncaughtException(&m_engine)) {
+			return 500;
+		} else {
+			return ret;
+		}
+	} else {
+		return 404;
+	}
+}
+
+bool ScriptManager::has(const Controller& cont) {
+	auto ctrl = std::get<0>(cont);
+	auto func = std::get<1>(cont);
+
+	if(m_controllers.constFind(ctrl) == m_controllers.constEnd())
+		return false;
+	if(!m_controllers.value(ctrl).property(func).isFunction())
+		return false;
+	return true;
 }

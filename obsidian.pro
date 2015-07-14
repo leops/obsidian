@@ -13,21 +13,22 @@ CONFIG   += console c++14
 CONFIG   -= app_bundle
 
 TEMPLATE = app
+INCLUDEPATH += include
 
-SOURCES += main.cpp \
-    httprequest.cpp \
-    httpresponse.cpp \
-    controller.cpp \
-    model.cpp \
-    global.cpp \
-    view.cpp \
-    obsidian.cpp
+SOURCES += \
+    src\main.cpp \
+    src\httprequest.cpp \
+    src\httpresponse.cpp \
+    src\global.cpp \
+    src\obsidian.cpp \
+    src\router.cpp
 
 HEADERS += \
-    httprequest.hpp \
-    httpresponse.hpp \
-    controller.hpp \
-    model.hpp \
-    global.hpp \
-    view.hpp \
-    obsidian.hpp
+    include\httprequest.hpp \
+    include\httpresponse.hpp \
+    include\controller.hpp \
+    include\model.hpp \
+    include\global.hpp \
+    include\view.hpp \
+    include\obsidian.hpp \
+    include\router.hpp

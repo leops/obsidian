@@ -1,8 +1,12 @@
 #include "httprequest.hpp"
+#include <QDebug>
 
 HTTPRequest::HTTPRequest(QTcpSocket* socket, QObject *parent) : QObject(parent), m_socket(socket) {
 	m_socket->waitForReadyRead();
 	auto data = QString(m_socket->readAll());
+
+	if(data.isEmpty())
+		return;
 
 	auto request = data.mid(0, data.indexOf('\n') + 1).trimmed().split(' ');
 	m_method = request[0];
@@ -10,7 +14,7 @@ HTTPRequest::HTTPRequest(QTcpSocket* socket, QObject *parent) : QObject(parent),
 	m_path = m_url.path().split("/").filter(QRegExp("^.+$"));
 	if(!m_url.query().isEmpty()) {
 		auto query = m_url.query().split("&");
-		foreach(auto param, query) {
+		Q_FOREACH(auto param, query) {
 			auto p = param.split("=");
 			m_params[p[0]] = p[1];
 		}
@@ -28,7 +32,7 @@ HTTPRequest::HTTPRequest(QTcpSocket* socket, QObject *parent) : QObject(parent),
 		body = "";
 	}
 
-	foreach(auto line, head.split('\n')) {
+	Q_FOREACH(auto line, head.split('\n')) {
 		auto colon = line.indexOf(':');
 		auto headerName = line.left(colon).trimmed();
 		auto headerValue = line.mid(colon + 1).trimmed();
@@ -37,7 +41,7 @@ HTTPRequest::HTTPRequest(QTcpSocket* socket, QObject *parent) : QObject(parent),
 
 	if(m_headers.contains("Cookie")) {
 		auto cookies = headers("Cookie").split(QRegExp(";\\s?"));
-		foreach(auto c, cookies) {
+		Q_FOREACH(auto c, cookies) {
 			auto cookie = c.split("=");
 			m_cookies.insert(cookie.at(0), cookie.at(1));
 		}
@@ -45,7 +49,7 @@ HTTPRequest::HTTPRequest(QTcpSocket* socket, QObject *parent) : QObject(parent),
 
 	if(!body.isEmpty()) {
 		auto b = QUrl::fromEncoded(body.toUtf8()).toString().split("&");
-		foreach(auto v, b) {
+		Q_FOREACH(auto v, b) {
 			auto d = v.split("=");
 			m_post[d.at(0)] = d.at(1);
 		}

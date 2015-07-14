@@ -2,24 +2,20 @@
 #define VIEW_HPP
 
 #include <QObject>
-#include <QScriptValue>
-#include <QScriptValueIterator>
 #include <QFile>
 #include <QStack>
+#include <tuple>
 #include "global.hpp"
 
-class ViewManager : public QObject {
-	Q_OBJECT
-
-public:
-	explicit ViewManager(QObject* parent = nullptr) : QObject(parent) {}
-	virtual QByteArray render(const QString& name, const QVariantHash& params) = 0;
-	virtual bool has(const QString&) const = 0;
+class ViewManager {
+	public:
+		virtual QByteArray render(const QString& name, const QVariantHash& params) = 0;
+		virtual bool has(const QString&) const = 0;
 };
 
 Q_DECLARE_INTERFACE(ViewManager, "com.obsidian.ViewManager")
 
-class OTPManager : public ViewManager {
+/*class OTPManager : public ViewManager {
 	Q_OBJECT
 	Q_INTERFACES(ViewManager)
 
@@ -35,6 +31,6 @@ protected:
 
 private:
 	typedef std::tuple<QString, QVariantHash, QVariantHash> Scope;
-};
+};*/
 
 #endif // VIEW_HPP
