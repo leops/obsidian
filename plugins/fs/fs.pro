@@ -1,15 +1,15 @@
 TEMPLATE      = lib
-CONFIG       += plugin c++14 no_keywords
+CONFIG       += plugin c++14
 QT           += core network websockets
 INCLUDEPATH  += ../../include
 
 HEADERS       = \
-    assets.hpp
+    fs.hpp
 SOURCES       = \
-    assets.cpp
+    fs.cpp
 
-TARGET        = $$qtLibraryTarget(ctrl_assets)
+TARGET        = $$qtLibraryTarget(mdl_fs)
 DESTDIR       = ../../../../bassdrop/plugins
 
 DISTFILES += \
-    assets.json
+    fs.json

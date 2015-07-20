@@ -1,5 +1,5 @@
 #include <sql.hpp>
-#include <global.hpp>
+#include <obsidian.hpp>
 #include <QSqlQuery>
 
 SQLModel::SQLModel(const QString& name, const QJsonObject& data, QObject *parent) : QObject(parent) {
@@ -160,7 +160,7 @@ bool SQLModel::destroy(const QVariantHash& selector, int limit) {
 }
 
 SQLManager::SQLManager(QObject* parent) : QObject(parent) {
-	auto config = getConfig("database");
+	auto config = Obsidian::getConfig("database");
 	auto type = config["type"].toString().toLower();
 	if(type == "sqlite") {
 		type = "QSQLITE";
@@ -186,7 +186,7 @@ SQLManager::SQLManager(QObject* parent) : QObject(parent) {
 	if(!db.open())
 		qWarning() << "Could not open database";
 
-	auto mdlDir = getDir("models");
+	auto mdlDir = Obsidian::getDir("models");
 	foreach (QString fileName, mdlDir.entryList(QDir::Files)) {
 		QFile file(mdlDir.absoluteFilePath(fileName));
 		file.open(QIODevice::ReadOnly | QIODevice::Text);
@@ -198,12 +198,14 @@ SQLManager::SQLManager(QObject* parent) : QObject(parent) {
 		auto model = QJsonDocument::fromJson(file.readAll(), &err).object();
 		if(err.error != QJsonParseError::NoError)
 			qWarning().noquote() << err.errorString();
-		m_models[name] = createModel(name, model);
+
+		if(model.value("type").toString() == "sql")
+			m_models[name] = createModel(name, model);
 
 		file.close();
 	}
 }
 
-Model* SQLManager::createModel(const QString &name, const QJsonObject &data) {
+QObject* SQLManager::createModel(const QString &name, const QJsonObject &data) {
 	return new SQLModel(name, data, this);
 }

@@ -12,7 +12,7 @@ QRegularExpression makeRegExp(QStringList routes) {
 
 Router::Router(Obsidian* app) {
 	m_app = app;
-	m_config = getConfig("routes");
+	m_config = app->getConfig("routes");
 
 	auto keys = m_config.keys();
 	for(int i = 0; i < keys.size(); i++) {
@@ -41,7 +41,7 @@ QVariant Router::execute(const Controller& cont, QObjectList& args) {
 	return QVariant();
 }
 
-void Router::route(HTTPRequest & req, HTTPResponse & res) {
+void Router::route(AbstractRequest& req, AbstractResponse& res) {
 	auto method = req.method().toUpper();
 	if(!m_routes.contains(method)) {
 		qDebug() << " -> Method not allowed" << method;
@@ -61,7 +61,7 @@ void Router::route(HTTPRequest & req, HTTPResponse & res) {
 	int i = 1; for(; txts.at(i).isEmpty(); i++);
 
 	auto groups = regex.namedCaptureGroups();
-	int j = 1; for(; groups.at(i + j).isEmpty(); j++);
+	int j = 1; for(; (i + j) < groups.size() && groups.at(i + j).isEmpty(); j++);
 
 	auto info = m_routesInfo.value(groups.at(i));
 	req.setMatch(txts.mid(i, j));
@@ -69,7 +69,7 @@ void Router::route(HTTPRequest & req, HTTPResponse & res) {
 	if(info.isString())
 		info = QJsonArray({info});
 
-	int status;
+	int status = 404;
 	QObjectList args = QObjectList() << &req << &res;
 	Q_FOREACH(auto controller, info.toArray()) {
 		auto cont = getController(controller.toString());
@@ -80,8 +80,7 @@ void Router::route(HTTPRequest & req, HTTPResponse & res) {
 			break;
 		} else {
 			if (ret.isNull()) {
-				qDebug() << " -> No matching controller found";
-				res.close(404);
+				qDebug() << " -> Controller not found";
 			} else if (static_cast<QMetaType::Type>(ret.type()) == QMetaType::Int) {
 				status = ret.toInt();
 				qDebug() << " -> Controller returned status" << status;

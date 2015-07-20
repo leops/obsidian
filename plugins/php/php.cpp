@@ -2,7 +2,6 @@
 #include <ph7.c>
 #include <httprequest.hpp>
 #include <httpresponse.hpp>
-#include <global.hpp>
 #include <obsidian.hpp>
 
 #include <QMetaProperty>
@@ -225,7 +224,7 @@ PHPManager::PHPManager(QObject* parent) : QObject(parent) {
 
 	auto app = dynamic_cast<Obsidian*>(Obsidian::instance());
 
-	auto ctrlDir = getDir("controllers");
+	auto ctrlDir = Obsidian::getDir("controllers");
 	Q_FOREACH (QString fileName, ctrlDir.entryList({"*.php"}, QDir::Files)) {
 		auto name = fileName.split(".").first().toLower();
 		qDebug().noquote() << "Loading controller" << name;

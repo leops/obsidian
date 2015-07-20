@@ -1,12 +1,12 @@
 #include <assets.hpp>
-#include <global.hpp>
+#include <obsidian.hpp>
 
 QHash<QString, QString> AssetsManager::s_types = {
 	{"css", "text/css"}
 };
 
 AssetsManager::AssetsManager(QObject* parent) : QObject(parent) {
-	auto conf = getConfig("server");
+	auto conf = Obsidian::getConfig("server");
 	if(conf.contains("cacheSize"))
 		m_cache.setMaxCost(conf.value("cacheSize").toInt());
 }
@@ -25,7 +25,7 @@ QVariant AssetsManager::execute(const Controller& cont, QObjectList& arguments) 
 	if(m_cache.contains(url)) {
 		*data = m_cache.object(url)->toUtf8();
 	} else {
-		auto astDir = getDir("assets");
+		auto astDir = Obsidian::getDir("assets");
 		QFile file(astDir.absoluteFilePath(astDir.path() + url));
 		if(file.exists()) {
 			file.open(QIODevice::ReadOnly | QIODevice::Text);

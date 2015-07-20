@@ -1,7 +1,6 @@
 #include <js.hpp>
 #include <obsidian.hpp>
 #include <model.hpp>
-#include <global.hpp>
 #include <QScriptValueIterator>
 
 bool uncaughtException(QScriptEngine* engine){
@@ -127,8 +126,7 @@ ScriptManager::ScriptManager(QObject* parent) : QObject(parent) {
 	auto app = dynamic_cast<Obsidian*>(Obsidian::instance());
 	if(app) {
 		auto global = m_engine.globalObject();
-		auto modelList = app->getModels();
-		Q_FOREACH(auto manager, modelList) {
+		Q_FOREACH(auto manager, app->getModels()) {
 			auto list = manager->models();
 			for(int i = 0; i < list.length(); i++) {
 				auto model = dynamic_cast<QObject*>(manager->models(list[i]));
@@ -140,7 +138,7 @@ ScriptManager::ScriptManager(QObject* parent) : QObject(parent) {
 		}
 	}
 
-	auto ctrlDir = getDir("controllers");
+	auto ctrlDir = Obsidian::getDir("controllers");
 	Q_FOREACH (QString fileName, ctrlDir.entryList({"*.js"}, QDir::Files)) {
 		auto name = fileName.split(".").first().toLower();
 		qDebug().noquote() << "Loading controller" << name;

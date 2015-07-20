@@ -1,7 +1,7 @@
 #include "httprequest.hpp"
 #include <QDebug>
 
-HTTPRequest::HTTPRequest(QTcpSocket* socket, QObject *parent) : QObject(parent), m_socket(socket) {
+HTTPRequest::HTTPRequest(QAbstractSocket* socket, QObject *parent) : AbstractRequest(parent), m_socket(socket) {
 	m_socket->waitForReadyRead();
 	auto data = QString(m_socket->readAll());
 

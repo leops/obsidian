@@ -31,7 +31,7 @@ class SQLManager : public QObject, public ModelManager {
 
 	public:
 		explicit SQLManager(QObject *parent = nullptr);
-		Model* createModel(const QString& name, const QJsonObject& data);
+		QObject* createModel(const QString& name, const QJsonObject& data);
 };
 
 #endif // PHP_HPP

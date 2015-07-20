@@ -8,7 +8,6 @@
 #include <QVariant>
 #include <QDebug>
 #include <functional>
-#include <global.hpp>
 
 class Model {
 	public:
@@ -23,18 +22,18 @@ class Model {
 
 class ModelManager {
 	public:
-		virtual Model* createModel(const QString& name, const QJsonObject& data) = 0;
+		virtual QObject* createModel(const QString& name, const QJsonObject& data) = 0;
 
 		QStringList models() const {
 			return m_models.keys();
 		}
 
-		Model* models(const QString& name) const {
+		QObject* models(const QString& name) const {
 			return m_models[name];
 		}
 
 	protected:
-		QHash<QString, Model*> m_models;
+		QHash<QString, QObject*> m_models;
 };
 
 Q_DECLARE_INTERFACE(ModelManager, "com.obsidian.ModelManager")

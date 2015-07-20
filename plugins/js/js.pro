@@ -1,16 +1,15 @@
 TEMPLATE      = lib
 CONFIG       += plugin c++14 no_keywords
-QT           += core script network sql
+QT           += core script network websockets
 INCLUDEPATH  += ../../include
 
 HEADERS       = \
     js.hpp
 SOURCES       = \
-    js.cpp \
-    ../../src/global.cpp
+    js.cpp
 
 TARGET        = $$qtLibraryTarget(ctrl_js)
-DESTDIR       = ../../../../site/plugins
+DESTDIR       = ../../../../bassdrop/plugins
 
 DISTFILES += \
     js.json

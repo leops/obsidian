@@ -4,7 +4,7 @@
 #
 #-------------------------------------------------
 
-QT       += core network script sql
+QT       += core network websockets
 QT       -= gui
 
 TARGET = obsidian
@@ -19,16 +19,21 @@ SOURCES += \
     src\main.cpp \
     src\httprequest.cpp \
     src\httpresponse.cpp \
-    src\global.cpp \
     src\obsidian.cpp \
-    src\router.cpp
+    src\router.cpp \
+    src/wsrequest.cpp \
+    src/wsresponse.cpp \
+    src/abstractresponse.cpp
 
 HEADERS += \
     include\httprequest.hpp \
     include\httpresponse.hpp \
     include\controller.hpp \
     include\model.hpp \
-    include\global.hpp \
     include\view.hpp \
     include\obsidian.hpp \
-    include\router.hpp
+    include\router.hpp \
+    include/wsrequest.hpp \
+    include/wsresponse.hpp \
+    include/abstractrequest.hpp \
+    include/abstractresponse.hpp

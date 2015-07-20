@@ -7,9 +7,10 @@
 #include <QStringList>
 #include <QDebug>
 #include <QRegularExpression>
+#include <abstractrequest.hpp>
+#include <abstractresponse.hpp>
 
 class Obsidian;
-class HTTPRequest;
 class HTTPResponse;
 
 typedef std::tuple<QString, QString> Controller;
@@ -17,7 +18,7 @@ typedef std::tuple<QString, QString> Controller;
 class Router : public QObject {
 	public:
 		Router(Obsidian*);
-		void route(HTTPRequest&, HTTPResponse&);
+		void route(AbstractRequest&, AbstractResponse&);
 	protected:
 		QVariant execute(const Controller&, QObjectList&);
 		Controller getController(const QString& name) {

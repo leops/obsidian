@@ -2,10 +2,8 @@
 #define CONTROLLER_HPP
 
 #include <QObject>
-#include "global.hpp"
-#include "httprequest.hpp"
-#include "httpresponse.hpp"
-//#include "obsidian.hpp"
+#include <httprequest.hpp>
+#include <httpresponse.hpp>
 
 typedef std::tuple<QString, QString> Controller;
 

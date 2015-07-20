@@ -3,6 +3,7 @@
 
 #include <view.hpp>
 #include <parser.h>
+#include <QDir>
 
 class MustacheManager : public QObject, public ViewManager {
 	Q_OBJECT

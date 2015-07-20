@@ -1,9 +1,9 @@
 #include <mustache.hpp>
-#include <global.hpp>
 #include <parser.h>
+#include <obsidian.hpp>
 
-MustacheManager::MustacheManager(QObject* parent) : QObject(parent), m_basePath(getDir("views")), m_resolver(m_basePath.absolutePath()) {
-	auto conf = getConfig("server");
+MustacheManager::MustacheManager(QObject* parent) : QObject(parent), m_basePath(Obsidian::getDir("views")), m_resolver(m_basePath.absolutePath()) {
+	auto conf = Obsidian::getConfig("server");
 	if(conf.contains("cacheSize"))
 		m_resolver.setMaxCost(conf.value("cacheSize").toInt());
 }

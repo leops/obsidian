@@ -1,6 +1,6 @@
 TEMPLATE      = lib
 CONFIG       += plugin c++14 no_keywords
-QT           += core network
+QT           += core network websockets
 INCLUDEPATH  += ../../include
 
 HEADERS       = \
@@ -8,11 +8,10 @@ HEADERS       = \
     parser.h
 SOURCES       = \
     mustache.cpp \
-    parser.cpp \
-    ../../src/global.cpp
+    parser.cpp
 
 TARGET        = $$qtLibraryTarget(view_mustache)
-DESTDIR       = ../../../../site/plugins
+DESTDIR       = ../../../../bassdrop/plugins
 
 DISTFILES += \
     mustache.json

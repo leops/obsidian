@@ -208,7 +208,7 @@ QString PartialMap::getPartial(const QString& name)
 }
 
 PartialFileLoader::PartialFileLoader(const QString& basePath)
-	: m_basePath(basePath)
+	: m_basePath(basePath), m_cache(100)
 {}
 
 void PartialFileLoader::setMaxCost(int m) {
@@ -221,15 +221,22 @@ int PartialFileLoader::maxCost() {
 
 QString PartialFileLoader::getPartial(const QString& name)
 {
+	QByteArray buffer;
 	if (!m_cache.contains(name)) {
 		QString path = m_basePath + '/' + name + ".mustache";
 		QFile file(path);
 		if (file.open(QIODevice::ReadOnly)) {
-			QTextStream stream(&file);
-			m_cache.insert(name, new QString(stream.readAll()), file.size());
+			buffer = file.readAll();
+			m_cache.insert(name, new QString(buffer), file.size());
 		}
 	}
-	return *m_cache.object(name);
+
+	if (m_cache.contains(name))
+		return *m_cache.object(name);
+	else if(!buffer.isEmpty())
+		return QString(buffer);
+	else
+		return QString();
 }
 
 Renderer::Renderer()
